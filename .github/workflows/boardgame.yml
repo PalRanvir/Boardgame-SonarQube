@@ -31,7 +31,7 @@ jobs:
             reporter: java-junit 
 
     sonar:
-        runs-on: latest
+        runs-on: ubuntu-latest
         needs: 
         - test_and_build
         steps:
