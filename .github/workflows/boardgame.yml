@@ -2,31 +2,57 @@ name: boardgame_CI
 on: workflow_dispatch
 
 jobs: 
-  test_and_build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
+    test_and_build:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v6
+        - name: Setup Java
+          uses: actions/setup-java@v5
+          with:
             distribution: 'temurin' # See 'Supported distributions' for available options
             java-version: '17'
-      - name: test & build
-        run: mvn clean verify
-      - name: Verify files
-        run: |
+        - name: test & build
+          run: mvn clean verify
+        - name: Verify files
+          run: |
             ls -R target
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
+        - name: Upload artifact
+          uses: actions/upload-artifact@v7
+          with:
             name: boardgame-artifact
             path: target/
-      - name: Publish test report
-        uses: dorny/test-reporter@v1
-        if: always ()    # run this step always
-        with:
-          name: Junit Tests            # Name of the check run which will be created
-          path: target/surefire-reports/*.xml   # Path to test results
-          reporter: java-junit    
+        - name: Publish test report
+          uses: dorny/test-reporter@v1
+          if: always ()    # run this step always
+          with:
+            name: Junit Tests            # Name of the check run which will be created
+            path: target/surefire-reports/*.xml   # Path to test results
+            reporter: java-junit 
 
+    sonar:
+        runs-on: latest
+        needs: 
+        - test_and_build
+        steps:
+        - name: Checkout code
+          uses: actions/checkout@v6
+        - name: Setup Java
+          uses: actions/setup-java@v5
+          with:
+            distribution: 'temurin' # See 'Supported distributions' for available options
+            java-version: '17'
+        - name: Download artifact
+          uses: actions/download-artifact@v8
+          with:
+            name: boardgame-artifact
+        - name: Setup SonarQube
+          uses: warchant/setup-sonar-scanner@v8
+        - name: SonarQube Scan
+          run: sonar-scanner
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.java.binaries=target/classes
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.qualitygate.wait=true
